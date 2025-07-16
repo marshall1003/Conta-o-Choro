@@ -3,7 +3,7 @@ import Analisador_sintatico as sintax_module
 import os
 import sys
 
-FILE = "Exemplo.txt"
+FILE = "Exemplo 2.txt"
 ENTRADA = os.path.join(r"C:\Users\maria\Desktop\Marciel\Redes\Conta-o-Choro\T6",FILE)
 SAIDA = os.path.join(r"C:\Users\maria\Desktop\Marciel\Redes\Conta-o-Choro\T6", FILE.replace('.txt', '_out.txt'))
 
@@ -26,16 +26,20 @@ class PokerSemantico:
 
     def verificar_redundancia_posicional(self):
         for i in range(len(self.tokens) - 3):
-            if self.tokens[i][1].lower() in sintax_module.POSICOES:
+            if self.tokens[i][1].lower() in sintax_module.posicoes_txt():
                 
                 tok1 = self.tokens[i]      # posição como sujeito
                 tok2 = self.tokens[i + 1]  # verbo "estava"
                 tok3 = self.tokens[i + 2]  # "no"
                 tok4 = self.tokens[i + 3]  # posição como destino
 
-                if tok1[1].lower() in sintax_module.POSICOES and tok2[0].lower() == 'estava' and tok3[1] == 'NO':
-                    if tok4[1].lower() in sintax_module.POSICOES:
+                if tok1[1].lower() in sintax_module.posicoes_txt() and tok2[0].lower() == 'estava' and tok3[1] == 'NO':
+                    if tok4[1].lower() in sintax_module.posicoes_txt():
                         self.erros.append(f"Linha {tok1[2]} - Redundância posicional: '{tok1[0]} estava no {tok4[0]}'")
+
+    def verificar_ordem_jogadores(self):
+        pass
+
 
     def analisar(self):
         self.verificar_redundancia_posicional()

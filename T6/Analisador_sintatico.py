@@ -17,15 +17,15 @@ ESTAGIOS = [
 ]
 
 POSICOES = [
-    'btn',
-    'co',
-    'bb',
-    'sb',
-    'utg',
-    'utg+1',
-    'mp',
-    'hj',
-    'lj'
+    ('utg', 4),
+    ('utg+1', 5),
+    ('lj', 6),
+    ('hj', 7),
+    ('co', 8),
+    ('mp', 9),
+    ('btn', 10),
+    ('sb', 1),
+    ('bb', 2)
 ]
 
 JOGADORES = [
@@ -57,6 +57,11 @@ JOGADORES = [
 
 #resultado      ::= jogador VERBO_RESULTADO [QUANTIDADE_FICHAS|POTE] PONTO
 
+def posicoes_txt():
+    posicoes = []
+    for posicao in POSICOES:
+        posicoes.append(posicao[0].upper())
+    return posicoes
 
 class PokerParser:
     def __init__(self, tokens):
@@ -83,14 +88,15 @@ class PokerParser:
         self.introducao()
         if self.token_atual and (self.token_atual[1] == 'NO' or self.token_atual[1] in ESTAGIOS):
             self.jogadas()
-        if self.token_atual and (self.token_atual[1] in JOGADORES or self.token_atual[1] in POSICOES):
+        if self.token_atual and (self.token_atual[1] in JOGADORES or self.token_atual[1] in posicoes_txt):
             self.resultado()
 
-    #   introducao ::= JOGADOR VERBO_POSSE situacao    
+    #   introducao ::= JOGADOR VERBO_POSSE situacoes    
     def introducao(self):
-        self.jogador()
-        self.consumir('VERBO_POSSE')
-        self.situacoes()
+        while self.token_atual and self.token_atual[1] in JOGADORES:
+            self.jogador()
+            self.consumir('VERBO_POSSE')
+            self.situacoes()
     
     #   situacoes ::= situacao [E situacao]
     def situacoes(self):
@@ -138,7 +144,7 @@ class PokerParser:
             
     #   posicao ::= BTN | CO | BB | SB | UTG | UTG+1 | MP | HJ | LJ    
     def posicao(self):
-        for posicao in POSICOES:
+        for posicao in posicoes_txt:
             if self.token_atual and self.token_atual[1] == posicao.upper():
                 self.consumir(posicao.upper())
                 break
