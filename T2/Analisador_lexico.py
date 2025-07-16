@@ -4,8 +4,8 @@ import sys
 
 
     # Caminhos padrão
-ENTRADA = r"C:\Users\maria\Desktop\Marciel\Compiladores\Testes\casos-de-teste\1.casos_teste_t1\entrada\34-algoritmo_8-1_apostila_LA_erro_linha_20.txt"
-SAIDA = r"C:\Users\maria\Desktop\Marciel\Compiladores\T1\testes\34-algoritmo_8-1_apostila_LA_erro_linha_20.txt"
+ENTRADA = r"C:\Users\maria\Desktop\Marciel\Compiladores\Testes\casos-de-teste\2.casos_teste_t2\entrada\13-algoritmo_3-1_apostila_LA_1_erro_linha_5.txt"
+SAIDA = r"C:\Users\maria\Desktop\Marciel\Compiladores\T2\testes\13-algoritmo_3-1_apostila_LA_1_erro_linha_5.txt"
 
 # Definição simplificada de tokens baseada em uma gramática típica de Linguagem Algorítmica (LA)
 TOKENS = [
@@ -103,6 +103,7 @@ TOKENS = [
 def lexer(codigo):
     pos = 0
     tokens = []
+    tokens_com_linha = []
     codigo_len = len(codigo)
     linha_atual = 1
 
@@ -113,7 +114,7 @@ def lexer(codigo):
             match = pattern.match(codigo, pos)
             if match:
                 matched_text = match.group(0)
-
+                pass
                 for other_type, other_regex in TOKENS:
                     other_pattern = re.compile(other_regex)
                     other_match = other_pattern.match(codigo, pos)
@@ -126,17 +127,18 @@ def lexer(codigo):
                     pass
                 if token_type == 'CADEIA':
                     if matched_text.find('\n') != -1:
-                        return tokens, f"Linha {linha_atual}: cadeia literal nao fechada"
+                        return tokens, None, f"Linha {linha_atual}: cadeia literal nao fechada"
                 
                 if token_type == 'COMENTARIO':
                     if matched_text.find('\n') != -1:
-                        return tokens, f"Linha {linha_atual}: comentario nao fechado"
+                        return tokens, None, f"Linha {linha_atual}: comentario nao fechado"
                     
                 if token_type == 'COMENTARIO_QUEBRADO':
                     if matched_text.find('\n') != -1:
-                        return tokens, f"Linha {linha_atual}: comentario nao fechado"
+                        return tokens, tokens_com_linha, f"Linha {linha_atual}: comentario nao fechado"
                 if token_type not in ['ESPACO', 'COMENTARIO']:
                     tokens.append((matched_text, token_type))
+                    tokens_com_linha.append((matched_text, token_type, linha_atual))
 
                 linha_atual += matched_text.count('\n')
                 pos += len(matched_text)
@@ -144,16 +146,16 @@ def lexer(codigo):
 
         if not match:
             simbolo = codigo[pos]
-            return tokens, f"Linha {linha_atual}: {simbolo} - simbolo nao identificado"
+            return tokens, tokens_com_linha, f"Linha {linha_atual}: {simbolo} - simbolo nao identificado"
 
-    return tokens, None
+    return tokens, tokens_com_linha, None
 
-def lexico(caminho_arquivo, caminho_saida):
+def lexico(caminho_arquivo, caminho_saida, caminho_saida_alt=None):
     
     with open(caminho_arquivo, "r", encoding="utf-8") as f:
         codigo = f.read()
 
-    tokens, erro = lexer(codigo)
+    tokens, tokens_com_linha, erro = lexer(codigo)
 
     with open(caminho_saida, "w", encoding="utf-8") as out:
         for matched_text, token_type in tokens:
@@ -161,21 +163,31 @@ def lexico(caminho_arquivo, caminho_saida):
                 out.write(f"<'{matched_text}',{token_type}>\n")
             else:
                 out.write(f"<'{matched_text}','{token_type}'>\n")
-
+    
+    with open(caminho_saida_alt, "w", encoding="utf-8") as out:
+        for matched_text, token_type, linha in tokens_com_linha:
+            if token_type in ('IDENT', 'NUM_INT', 'NUM_REAL', 'CADEIA'):
+                out.write(f"<'{matched_text}',{token_type}, {linha}>\n")
+            else:
+                out.write(f"<'{matched_text}','{token_type}', {linha}>\n")
+    
         if erro:
             out.write(erro + "\n")
             print(erro)
         else:
             print("Código léxicamente correto.")
         
-    return tokens, erro
+    return tokens, tokens_com_linha, erro
 
 if __name__ == "__main__":
     if len(sys.argv) >= 3:
         caminho_arquivo = sys.argv[1]
         caminho_saida = sys.argv[2]
+        
     else:
         caminho_arquivo = ENTRADA
         caminho_saida = SAIDA
     
-    lexico(caminho_arquivo, caminho_saida)
+    caminho_saida_alt = caminho_saida.replace('.txt', '_alt.txt')
+    
+    lexico(caminho_arquivo, caminho_saida, caminho_saida_alt)
