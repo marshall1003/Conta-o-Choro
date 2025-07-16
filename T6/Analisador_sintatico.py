@@ -4,9 +4,8 @@ import sys
 import Analisador_lexico as lexer_module
 
 # Caminhos padrão
-FILE = "Exemplo.txt"
-ENTRADA = os.path.join(r"C:\Users\maria\Desktop\Marciel\Redes\Conta-o-Choro\T6",FILE)
-SAIDA = os.path.join(r"C:\Users\maria\Desktop\Marciel\Redes\Conta-o-Choro\T6", FILE.replace('.txt', '_out.txt'))
+ENTRADA = r".\Exemplo\Input\Exemplo.txt"
+SAIDA = r".\Exemplo\Output\Exemplo_out.txt"
 
 
 ESTAGIOS = [
@@ -17,16 +16,29 @@ ESTAGIOS = [
 ]
 
 POSICOES = [
-    ('utg', 4),
-    ('utg+1', 5),
-    ('lj', 6),
-    ('hj', 7),
+    ('utg', 3),
+    ('utg+1', 4),
+    ('lj', 5),
+    ('hj', 6),
+    ('mp', 7),
     ('co', 8),
-    ('mp', 9),
-    ('btn', 10),
+    ('btn', 9),
     ('sb', 1),
     ('bb', 2)
 ]
+
+POSICOES_PREFLOP = [
+    ('utg', 1),
+    ('utg+1', 2),
+    ('lj', 3),
+    ('hj', 4),
+    ('mp', 5),
+    ('co', 6),
+    ('btn', 7),
+    ('sb', 8),
+    ('bb',9)
+]
+
 
 JOGADORES = [
     'eu',
@@ -41,9 +53,9 @@ JOGADORES = [
 
 #   introducao ::= JOGADOR VERBO_POSSE situacoes
 #   situacoes ::= situacao [E situacao]
-#   situacao ::= COM QUANTIDADE_FICHAS [NO posicao] [COM mao]
-#                | [COM QUANTIDADE_FICHAS] NO posicao [COM mao]
-#                | [COM QUANTIDADE_FICHAS] [NO posicao] COM mao
+#   situacao ::= COM quantidade_fichas [NO posicao] [COM mao]
+#                | [COM quantidade_fichas] NO posicao [COM mao]
+#                | [COM quantidade_fichas] [NO posicao] COM mao
 #   jogador ::= EU | ELE | VILAO | posicao
 #   mao ::= CARTA [DE NAIPE] [E] CARTA [DE NAIPE] | CARTA [E] CARTA [SUIT] 
 #   posicao ::= BTN | CO | BB | SB | UTG | UTG+1 | MP | HJ | LJ
@@ -51,11 +63,11 @@ JOGADORES = [
 #   jogadas ::= primeira_jogada {jogada}
 #   primeira_jogada ::= [NO] ESTAGIO jogada
 #   jogada ::= jogador acao_jogador [E jogador acao_jogador] PONTO
-#   acao_jogador ::= ACAO JOGADOR_ATIVA [QUANTIDADE_FICHAS|POTE] 
+#   acao_jogador ::= ACAO JOGADOR_ATIVA [quantidade_fichas|POTE] 
 #                   | ACAO JOGADOR_PASSIVA
 #   ESTAGIO ::= pre-flop | flop | turn | river
 
-#resultado      ::= jogador VERBO_RESULTADO [QUANTIDADE_FICHAS|POTE] PONTO
+#resultado      ::= jogador VERBO_RESULTADO [quantidade_fichas|POTE] PONTO
 
 def posicoes_txt():
     posicoes = []
@@ -68,6 +80,13 @@ class PokerParser:
         self.tokens = tokens
         self.pos = 0
         self.token_atual = self.tokens[self.pos] if self.tokens else None
+        self.jogadas_registradas = []
+        self.stage = None
+        self.player_atual = None
+        self.minha_posicao = None
+        self.acao = None
+        self.quantia = None
+        self.posicao_do_vilao = []
 
     def consumir(self, tipo):
         if self.token_atual and self.token_atual[1] == tipo:
@@ -88,12 +107,13 @@ class PokerParser:
         self.introducao()
         if self.token_atual and (self.token_atual[1] == 'NO' or self.token_atual[1] in ESTAGIOS):
             self.jogadas()
-        if self.token_atual and (self.token_atual[1] in JOGADORES or self.token_atual[1] in posicoes_txt):
+        if self.token_atual and (self.token_atual[1] in JOGADORES or self.token_atual[1] in posicoes_txt()):
             self.resultado()
 
     #   introducao ::= JOGADOR VERBO_POSSE situacoes    
     def introducao(self):
         while self.token_atual and self.token_atual[1] in JOGADORES:
+            self.player_atual = self.token_atual[1]
             self.jogador()
             self.consumir('VERBO_POSSE')
             self.situacoes()
@@ -109,16 +129,20 @@ class PokerParser:
             else:
                 body = False
 
-    #   situacao ::= COM QUANTIDADE_FICHAS [NO posicao] [COM mao]
-    #                | [COM QUANTIDADE_FICHAS] NO posicao [COM mao]
-    #                | [COM QUANTIDADE_FICHAS] [NO posicao] COM mao
+    #   situacao ::= COM quantidade_fichas [NO posicao] [COM mao]
+    #                | [COM quantidade_fichas] NO posicao [COM mao]
+    #                | [COM quantidade_fichas] [NO posicao] COM mao
     def situacao(self):
         if self.token_atual and self.token_atual[1] == 'COM':
-            if self.tokens[self.pos + 1][1] == 'QUANTIDADE_FICHAS':
+            if self.tokens[self.pos + 1][1] in ['NUM_INT', 'NUM_REAL']:
                 self.consumir('COM')
-                self.consumir('QUANTIDADE_FICHAS')
+                self.quantidade_fichas()
                 if self.token_atual and self.token_atual[1] == 'NO':
                     self.consumir('NO')
+                    if self.player_atual == 'EU':
+                        self.minha_posicao = self.token_atual[1]
+                    elif self.player_atual == 'VILAO':
+                        self.posicao_do_vilao.append(self.token_atual[1])
                     self.posicao()
                 if self.token_atual and self.token_atual[1] == 'COM':
                     self.consumir('COM')
@@ -135,11 +159,14 @@ class PokerParser:
                         self.consumir('COM')
                         self.mao()
         
-    #   jogador ::= EU | ELE | VILAO | posicao
+    #   jogador ::= EU | ELE | VILAO [DA posicao] | posicao
     def jogador(self):
         for jogador in JOGADORES:
             if self.token_atual and self.token_atual[1] == jogador.upper():
                 self.consumir(jogador.upper())
+                if self.token_atual and self.token_atual[1] == 'DA':
+                    self.consumir('DA')
+                    self.posicao()
                 break
             
     #   posicao ::= BTN | CO | BB | SB | UTG | UTG+1 | MP | HJ | LJ    
@@ -149,9 +176,13 @@ class PokerParser:
                 self.consumir(posicao.upper())
                 break
 
-    #   mao ::= CARTA [DE NAIPE] [E] CARTA [DE NAIPE] | CARTA [E] CARTA [SUIT] 
+    #   mao ::= CARTA [DE NAIPE] [E] CARTA [DE NAIPE] | CARTA [E] CARTA [SUIT] | 'par' DE CARTA
     def mao(self):
-        if self.token_atual and self.token_atual[1] == 'CARTA':
+        if self.token_atual and self.token_atual[0] == 'par':
+            self.consumir('FORCA_MAO')
+            self.consumir('DE')
+            self.consumir('CARTA')
+        else:
             self.consumir('CARTA')
             if self.token_atual and self.token_atual[1] == 'DE':
                 self.consumir('DE')
@@ -176,26 +207,44 @@ class PokerParser:
     def primeira_jogada(self):
         if self.token_atual and self.token_atual[1] == 'NO':
             self.consumir('NO')
-        if self.token_atual and self.token_atual[1] == 'ESTAGIO':
-            self.consumir('ESTAGIO')
-            self.jogada()
+        
+        self.stage = self.token_atual[0]
+        self.consumir('ESTAGIO')
+        self.jogada()
     
     #   jogada ::= jogador acao_jogador PONTO
     def jogada(self):
+        self.player_atual = self.token_atual[1]
         self.jogador()
         self.acao_jogador()
+        self.jogadas_registradas.append({
+            'jogador':self.player_atual,
+            'acao': self.token_atual[1]
+            
+            })
         self.consumir('PONTO')
 
-    #   acao_jogador ::= ACAO JOGADOR_ATIVA [QUANTIDADE_FICHAS|POTE]
+    #   acao_jogador ::= ACAO JOGADOR_ATIVA [quantidade_fichas|POTE]
     #                   | ACAO JOGADOR_PASSIVA
     def acao_jogador(self):
         if self.token_atual and self.token_atual[1] == 'ACAO_JOGADOR_ATIVA':
+            self.acao = self.token_atual[1]
             self.consumir('ACAO_JOGADOR_ATIVA')
-            if self.token_atual and (self.token_atual[1] == 'QUANTIDADE_FICHAS' or self.token_atual[1] == 'POTE'):
-                self.consumir(self.token_atual[1])
+            if self.token_atual and self.token_atual[1] in ['NUM_INT', 'NUM_REAL']:
+                self.quantia = self.token_atual[0]
+                self.quantidade_fichas()
+            else:
+                if self.token_atual and self.token_atual[1] == 'POTE':
+                    self.quantia = self.token_atual[1]    
+                    self.consumir(self.token_atual[1])
         elif self.token_atual and self.token_atual[1] == 'ACAO_JOGADOR_PASSIVA':
+            self.acao = self.token_atual[1]
             self.consumir('ACAO_JOGADOR_PASSIVA')
-        
+
+    #quantidade_fichas ::= ('NUM_INT'|'NUM_REAL') UNIDADE
+    def quantidade_fichas(self):
+        if  
+
     #resultado      ::= jogador VERBO_RESULTADO [QUANTIDADE_FICHAS|POTE] PONTO
     def resultado(self):
         if self.token_atual and self.token_atual[1] in JOGADORES:
@@ -206,11 +255,16 @@ class PokerParser:
         self.consumir('PONTO')
 
         
-def sintax(tokens_com_linha, erro, caminho_saida):
+def sintax(caminho_arquivo, caminho_saida):
+    caminho_saida_alt = caminho_saida.replace('.txt', '_alt.txt')
+    caminho_saida_lexico = caminho_saida.replace('_out.txt', '_lexico.txt')
+    tokens, tokens_com_linha, erro = lexer_module.lexico(caminho_arquivo, caminho_saida_lexico, caminho_saida_alt)
+    
     if erro:
         with open(caminho_saida, "w", encoding="utf-8") as out:
                 out.write(erro + "\n")
                 out.write("Fim da compilacao\n")
+        return erro
     else:
         parser = PokerParser(tokens_com_linha)
         try:
@@ -230,14 +284,17 @@ def sintax(tokens_com_linha, erro, caminho_saida):
 
 if __name__ == "__main__":
     if len(sys.argv) >= 3:
-        caminho_arquivo = sys.argv[1]
-        caminho_saida = sys.argv[2]
+        if  sys.argv[1] == "Demo":
+            for file in os.listdir(r".\Exemplo\Input"):
+                caminho_arquivo = os.path.join(r".\Exemplo\Input", file)
+                caminho_saida = os.path.join(r".\Exemplo\Output", file.replace('.txt', '_out.txt'))
+                sintax(caminho_arquivo, caminho_saida)
+        else:
+            caminho_arquivo = sys.argv[1]
+            caminho_saida = sys.argv[2]
+            sintax(caminho_arquivo, caminho_saida)
+                
     else:
         caminho_arquivo = ENTRADA
         caminho_saida = SAIDA
-    
-    caminho_saida_alt = caminho_saida.replace('.txt', '_alt.txt')
-    
-    tokens, tokens_com_linha, erro = lexer_module.lexico(caminho_arquivo, caminho_saida, caminho_saida_alt)
-    
-    sintax(tokens_com_linha, erro, caminho_saida)
+        sintax(caminho_arquivo, caminho_saida)

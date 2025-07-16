@@ -1,0 +1,28 @@
+<'eu',EU,1>
+<'estava',VERBO_POSSE,1>
+<'com',COM,1>
+<'40 blinds',QUANTIDADE_FICHAS,1>
+<'no',NO,1>
+<'btn',BTN,1>
+<'com',COM,1>
+<'as',CARTA,1>
+<'as',CARTA,1>
+<'e',E,1>
+<'o botao',BTN,1>
+<'estava',VERBO_POSSE,1>
+<'no',NO,1>
+<'bb',BB,1>
+<'no',NO,2>
+<'pre-flop',ESTAGIO,2>
+<'apostei',ACAO_JOGADOR_ATIVA,2>
+<'2.1bb',QUANTIDADE_FICHAS,2>
+<'.',.,2>
+<'vilao',VILAO,2>
+<'pagou',ACAO_JOGADOR_PASSIVA,2>
+<'no',NO,3>
+<'turn',ESTAGIO,3>
+<'apostei',ACAO_JOGADOR_ATIVA,3>
+<'dei all in',ACAO_JOGADOR_ATIVA,3>
+<'.',.,3>
+<'vilao',VILAO,3>
+<'pagou',ACAO_JOGADOR_PASSIVA,3>
