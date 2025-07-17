@@ -2,12 +2,14 @@ import Analisador_lexico as lexer_module
 import Analisador_sintatico as sintax_module
 import os
 import sys
-
+import json
 
 # Caminhos padrão
-ENTRADA = r".\Exemplo\Input\Exemplo.txt"
-SAIDA = r".\Exemplo\Output\Exemplo_out.txt"
-sys.argv = [r'C:\Users\628069\Documents\GitHub\Conta-o-Choro\T6\Analisador_semantico.py', 'Demo']
+BASE_DIR = os.path.dirname(__file__)
+ENTRADA = os.path.join(BASE_DIR, r"Exemplo\Input\Exemplo - Tudo certo.txt")
+SAIDA = os.path.join(BASE_DIR, r"Exemplo\Output\Exemplo - Tudo certo_out.txt")
+#sys.argv = [r'C:\Users\628069\Documents\GitHub\Conta-o-Choro\T6\Analisador_semantico.py', 'Demo']
+
 
 class ErroSemantico(Exception):
     def __init__(self):
@@ -52,8 +54,9 @@ def semantic(caminho_arquivo, caminho_saida):
     caminho_saida_alt = caminho_saida.replace('.txt', '_alt.txt')
     caminho_saida_lexico = caminho_saida.replace('_out.txt', '_lexico.txt')
     caminho_saida_sintax = caminho_saida.replace('_out.txt', '_sintax.txt')
-    tokens, tokens_com_linha, erro = lexer_module.lexico(caminho_arquivo, caminho_saida_lexico, caminho_saida_alt)
-    erro_sintax = sintax_module.sintax(caminho_arquivo, caminho_saida_sintax)
+    tokens, tokens_com_linha, erro = lexer_module.lexico(caminho_arquivo, caminho_saida_lexico, caminho_saida_alt, False)
+    erro_sintax, historia = sintax_module.sintax(caminho_arquivo, caminho_saida_sintax)
+    print(json.dumps(historia, indent = 4))
     if erro_sintax:
         pass
     else:
@@ -71,15 +74,20 @@ def semantic(caminho_arquivo, caminho_saida):
 
 # Exemplo de uso:
 if __name__ == '__main__':
-    
-    if  sys.argv[1] == "Demo":
-            for file in os.listdir(r".\Exemplo\Input"):
-                caminho_arquivo = os.path.join(r".\Exemplo\Input", file)
-                caminho_saida = os.path.join(r".\Exemplo\Output", file.replace('.txt', '_out.txt'))
+    size = len(sys.argv)
+    if len(sys.argv) > 1:
+        if  sys.argv[1] == "Demo":
+                for file in os.listdir(r".\Exemplo\Input"):
+                    caminho_arquivo = os.path.join(r".\Exemplo\Input", file)
+                    caminho_saida = os.path.join(r".\Exemplo\Output", file.replace('.txt', '_out.txt'))
+                    semantic(caminho_arquivo, caminho_saida)
+        elif len(sys.argv) >= 3:
+                caminho_arquivo = sys.argv[1]
+                caminho_saida = sys.argv[2]
                 semantic(caminho_arquivo, caminho_saida)
-    elif len(sys.argv) >= 3:
-            caminho_arquivo = sys.argv[1]
-            caminho_saida = sys.argv[2]
+        else:
+            caminho_arquivo = ENTRADA
+            caminho_saida = SAIDA
             semantic(caminho_arquivo, caminho_saida)
     else:
         caminho_arquivo = ENTRADA

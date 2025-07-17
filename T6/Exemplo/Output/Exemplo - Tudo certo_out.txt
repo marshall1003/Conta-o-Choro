@@ -1,2 +1,1 @@
-Linha 1 - Redundância posicional: 'o botao estava no bb'
 Fim da compilacao

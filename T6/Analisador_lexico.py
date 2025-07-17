@@ -18,7 +18,8 @@ TOKENS = [
     ('VERBO_POSSE', r'\b(estava|tinha)\b'),
     ('VERBO_RESULTADO', r'\b(ganh(ei|ou)|perd(i|eu))\b'),
     ('VERBO_IRRELEVANTE', r'\b(pens(ar|ei|ou)|ach(ar|ei|ou))\b'),
-    ('ACAO_JOGADOR_ATIVA', r'\b(apost(ei|ou|ar)|(c-)?bet(ar|ei|ou)|aument(ei|ou)|blef(ei|ou|ar)|(d(ar |ei |eu ))?all in)\b'),
+    ('ACAO_JOGADOR_ATIVA', r'\b(apost(ei|ou|ar)|(c-)?bet(ar|ei|ou)|aument(ei|ou)|blef(ei|ou|ar))\b'),
+    ('ALL_IN', r'\b(d(ar |ei |eu ))?all in\b'),
     ('ACAO_JOGADOR_PASSIVA', r'\b(pag(uei|ou|ar)|desisti(u|r)?d(ar|ei|eu) mesa|(d(ar |ei |eu ))?check|check(ar|ei|ou)|fold(ar|ei|ou)?)\b'),
     
     #Posições
@@ -54,6 +55,7 @@ TOKENS = [
 
     #termos de nicho
     ('UNIDADE', r'\b(blind(s)|pingo(s)|bb(s)?|%( do pote)?|usd|dolar(es)?|brl|rea(l|is))\b'),
+    ('UNIDADE_POTE', r'\b%( do pote)?\b'),
     ('ESTAGIO', r'\b(pre(-)?flop|flop|turn|river)\b'),
     ('ANTE', r'\bante\b'),
     ('POTE', r'\b(o )?pote\b'),
@@ -63,8 +65,8 @@ TOKENS = [
 
     #tokens base
     ('NEGACAO', r'\bnao\b'),
-    ('NUM_INT', r'\b\d+\b'),
     ('NUM_REAL', r'\b\d+\.\d+\b'),
+    ('NUM_INT', r'\b\d+\b'),
     ('CADEIA', r'"([^"\\]|\\.)*"'),
     ('.', r'\.'),
     (',', r','),
@@ -96,7 +98,7 @@ def lexer(codigo):
             return tokens, tokens_com_linha, f"Erro léxico na linha {linha_atual}: Símbolo não reconhecido '{codigo[pos]}'" 
     return tokens, tokens_com_linha, None
 
-def lexico(caminho_arquivo, caminho_saida, caminho_saida_alt):
+def lexico(caminho_arquivo, caminho_saida, caminho_saida_alt, message_output=True):
     
     with open(caminho_arquivo, "r", encoding="utf-8") as f:
         codigo = f.read().lower()
@@ -115,7 +117,8 @@ def lexico(caminho_arquivo, caminho_saida, caminho_saida_alt):
             out.write(erro + "\n")
             print(erro)
         else:
-            print("Código léxicamente correto.")
+            if message_output:
+                print("História lexicamente valida!")
         
     return tokens, tokens_com_linha, erro
 

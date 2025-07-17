@@ -1,1 +1,2 @@
+Esperado ACAO_JOGADOR_ATIVA, encontrado ('dei all in', 'ALL_IN', 3)
 Fim da compilacao
