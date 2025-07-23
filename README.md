@@ -19,6 +19,8 @@ Em linha de comando windows:
 - python ARG1 Demo (para execução Exemplo)
 
 ARG1: caminho do analisador semântico
+
 ARG2: caminho para o arquivo de entrada (sua história)
+
 ARG3: caminho para o araquivo de saída
 
