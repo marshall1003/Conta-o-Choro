@@ -1,4 +1,0 @@
-<'eu',EU,1>
-<'estava',VERBO_POSSE,1>
-<'com',COM,1>
-Erro léxico na linha 1: Símbolo não reconhecido 'b'

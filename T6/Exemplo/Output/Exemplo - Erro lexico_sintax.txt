@@ -1,2 +1,0 @@
-Erro léxico na linha 1: Símbolo não reconhecido 'v'
-Fim da compilacao

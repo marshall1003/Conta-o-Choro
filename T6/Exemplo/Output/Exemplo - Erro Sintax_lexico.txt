@@ -1,3 +1,0 @@
-<'eu',EU>
-<'estava',VERBO_POSSE>
-<'com',COM>

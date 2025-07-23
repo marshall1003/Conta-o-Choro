@@ -1,3 +1,0 @@
-Linha 2 - Redundância posicional: 'o botao estava no bb'
-Linha 3 - Redundância posicional: 'o small blind estava no sb'
-Fim da compilacao
