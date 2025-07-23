@@ -24,13 +24,13 @@ Em linha de comando windows:
 
 `ARG2`: caminho para o arquivo de entrada (sua história)
 
-`ARG3`: caminho para o araquivo de saída
+`ARG3`: caminho para o arquivo de saída
 
 # Instruções para criação de histórias
 - a História deve conter Introdução e jogadas. Pode conter Resultado.
 
 ## Introdução
-- Descrição objetiva sobre quem está envolvido ("Eu", <Nome do jogador>, "o Vilão"). Há suporte para situações multiway (mais de 2 jogadores). Use frases como
+- Descrição objetiva sobre quem está envolvido ("Eu", <Nome_jogador>, "o Vilão"). Há suporte para situações multiway (mais de 2 jogadores). Use frases como
 - "Daniel estava no botão com rei de copas e rei de ouros"
 - "Marciel estava com 50 USD no BB"
 
