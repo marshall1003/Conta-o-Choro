@@ -17,6 +17,7 @@ Esta ferramenta foi desenvolvida em Python.
 Em linha de comando windows:
 
 `python ARG1 ARG2 ARG3` (para execução própria)
+
 `python ARG1 Demo` (para execução Exemplo)
 
 `ARG1`: caminho do analisador semântico
