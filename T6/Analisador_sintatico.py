@@ -7,7 +7,7 @@ import Analisador_lexico as lexer_module
 ENTRADA = r".\Exemplo\Input\Exemplo.txt"
 SAIDA = r".\Exemplo\Output\Exemplo_out.txt"
 
-
+INFINITY_STACK = 999999999
 ESTAGIOS = [
     'pre-flop',
     'flop',
@@ -41,9 +41,16 @@ POSICOES_PREFLOP = [
 
 
 JOGADORES = [
-    'eu',
-    'ele',
-    'vilao'
+    'EU',
+    'ELE',
+    'VILAO'
+]
+
+ACAO_JOGADOR_PASSIVA = [
+    'FOLD',
+    'CALL',
+    'CHECK',
+    'ALL_IN_CALL'
 ]
 
 
@@ -83,10 +90,12 @@ class PokerParser:
         self.jogadas_registradas = []
         self.stage = None
         self.player_atual = None
-        self.minha_posicao = None
         self.acao = None
         self.quantia = None
-        self.posicao_do_vilao = []
+        self.posicao_mesa = None
+        self.linha = None
+        self.pote = 0
+        self.players = []
 
     def consumir(self, tipo):
         if self.token_atual and self.token_atual[1] == tipo:
@@ -105,18 +114,20 @@ class PokerParser:
     #   historia ::= introducao {jogadas} {resultado}
     def historia(self):
         self.introducao()
-        if self.token_atual and (self.token_atual[1] == 'NO' or self.token_atual[1] in ESTAGIOS):
+        while self.token_atual and (self.token_atual[1] == 'NO' or self.token_atual[1] in ESTAGIOS):
             self.jogadas()
         if self.token_atual and (self.token_atual[1] in JOGADORES or self.token_atual[1] in posicoes_txt()):
             self.resultado()
+        return self.jogadas_registradas, self.players
 
-    #   introducao ::= JOGADOR VERBO_POSSE situacoes    
+    #   introducao ::= jogador VERBO_POSSE situacoes    
     def introducao(self):
-        while self.token_atual and self.token_atual[1] in JOGADORES:
-            self.player_atual = self.token_atual[1]
-            self.jogador()
-            self.consumir('VERBO_POSSE')
-            self.situacoes()
+        while self.token_atual and (
+            self.token_atual[1] in JOGADORES or 
+            self.token_atual[1] in posicoes_txt() or 
+            self.token_atual[1] == 'CADEIA'):
+            
+                self.situacoes()
     
     #   situacoes ::= situacao [E situacao]
     def situacoes(self):
@@ -128,51 +139,84 @@ class PokerParser:
                 self.situacao()
             else:
                 body = False
+        if self.token_atual and self.token_atual[1] == '.':
+            self.consumir('.')
 
-    #   situacao ::= COM quantidade_fichas [NO posicao] [COM mao]
-    #                | [COM quantidade_fichas] NO posicao [COM mao]
-    #                | [COM quantidade_fichas] [NO posicao] COM mao
-    def situacao(self):
-        if self.token_atual and self.token_atual[1] == 'COM':
-            if self.tokens[self.pos + 1][1] in ['NUM_INT', 'NUM_REAL']:
-                self.consumir('COM')
-                self.quantidade_fichas()
-                if self.token_atual and self.token_atual[1] == 'NO':
-                    self.consumir('NO')
-                    if self.player_atual == 'EU':
-                        self.minha_posicao = self.token_atual[1]
-                    elif self.player_atual == 'VILAO':
-                        self.posicao_do_vilao.append(self.token_atual[1])
-                    self.posicao()
-                if self.token_atual and self.token_atual[1] == 'COM':
-                    self.consumir('COM')
-                    self.mao()
-            else:
-                if self.token_atual and self.token_atual[1] == 'COM':
-                    self.consumir('COM')
-                    self.mao()
-        else: 
-            if self.token_atual and self.token_atual[1] == 'NO':
-                    self.consumir('NO')
-                    self.posicao()
-                    if self.token_atual and self.token_atual[1] == 'COM':
-                        self.consumir('COM')
-                        self.mao()
+
+    def add_player(self, stack):
+        if len(self.players) == 0:
+            self.players.append({
+                            "jogador":self.player_atual,
+                            'posicao': self.posicao_mesa,
+                            "stack": round(stack,1)
+            })
+            return False
         
-    #   jogador ::= EU | ELE | VILAO [DA posicao] | posicao
+        for jogador in self.players:
+            if self.player_atual == jogador['jogador']:
+                return False
+        
+        self.players.append({
+                            "jogador":self.player_atual,
+                            'posicao': self.posicao_mesa,
+                            "stack": round(stack, 1)
+            })
+                
+                
+    #   situacao ::= COM quantidade_fichas NO posicao [COM mao]
+    #                | [COM quantidade_fichas] NO posicao [COM mao]
+    def situacao(self):
+        self.player_atual = self.token_atual[1]
+        self.jogador()
+        self.consumir('VERBO_POSSE')
+        stack = None
+        if self.token_atual and self.token_atual[1] == 'COM':
+            self.consumir('COM')
+            stack = self.quantidade_fichas()
+            if self.token_atual and self.token_atual[1] == "UNIDADE_POTE":
+                self.consumir('UNIDADE_POTE')
+            else:
+                if self.token_atual and self.token_atual[1] == "UNIDADE":
+                    self.consumir('UNIDADE')
+                else:
+                    self.consumir('BB')
+            self.consumir('NO')
+            self.posicao()
+                
+            if self.token_atual and self.token_atual[1] == 'COM':
+                self.consumir('COM')
+                self.mao()
+            self.add_player(stack)
+        else: 
+            self.consumir('NO')
+            self.posicao()
+            if self.token_atual and self.token_atual[1] == 'COM':
+                self.consumir('COM')
+                self.mao()
+            self.add_player(INFINITY_STACK)
+        
+    #   jogador ::= EU | ELE | VILAO [DA posicao] | posicao | CADEIA
     def jogador(self):
-        for jogador in JOGADORES:
-            if self.token_atual and self.token_atual[1] == jogador.upper():
-                self.consumir(jogador.upper())
-                if self.token_atual and self.token_atual[1] == 'DA':
-                    self.consumir('DA')
-                    self.posicao()
-                break
+        if self.token_atual and self.token_atual[1] in JOGADORES:
+            self.player_atual = self.token_atual[1]
+            self.consumir(self.token_atual[1])
+            if self.token_atual and self.token_atual[1] == 'DA':
+                self.consumir('DA')
+                self.posicao()
+        elif self.token_atual and self.token_atual[1] in posicoes_txt():
+            self.player_atual = self.token_atual[1]
+            self.consumir(self.token_atual[1])
+        elif self.token_atual and self.token_atual[1] == 'CADEIA':
+            self.player_atual = self.token_atual[0]
+            self.consumir('CADEIA')
+        else:
+            raise SyntaxError(f"Esperado jogador, encontrado {self.token_atual}")
             
     #   posicao ::= BTN | CO | BB | SB | UTG | UTG+1 | MP | HJ | LJ    
     def posicao(self):
-        for posicao in posicoes_txt:
+        for posicao in posicoes_txt():
             if self.token_atual and self.token_atual[1] == posicao.upper():
+                self.posicao_mesa = posicao.upper()
                 self.consumir(posicao.upper())
                 break
 
@@ -200,7 +244,14 @@ class PokerParser:
 #   jogadas ::= primeira_jogada {jogada}
     def jogadas(self):
         self.primeira_jogada()
-        while self.token_atual and self.token_atual[1] in JOGADORES and self.tokens[self.pos+1] != 'VERBO_RESULTADO':
+        while self.token_atual and (
+                self.token_atual[1] in JOGADORES or 
+                self.token_atual[1] in posicoes_txt() or 
+                self.token_atual[1] == 'CADEIA') and (
+                self.tokens[self.pos+1] != 'VERBO_RESULTADO') and not(
+                self.token_atual[1] == "NO" or 
+                self.token_atual[1] in ESTAGIOS):
+            
             self.jogada()
 
     #   primeira_jogada ::= [NO] ESTAGIO jogada
@@ -212,73 +263,159 @@ class PokerParser:
         self.consumir('ESTAGIO')
         self.jogada()
     
+    def find_player_stack(self):
+        for jogador in self.players:
+            if jogador['jogador'] == self.player_atual:
+                jogador['stack'] -= self.quantia 
+                return jogador['stack']
+        raise SyntaxError(f"{self.player_atual} não está na mão!")
     #   jogada ::= jogador acao_jogador PONTO
     def jogada(self):
+        stack = None
         self.player_atual = self.token_atual[1]
         self.jogador()
         self.acao_jogador()
-        self.jogadas_registradas.append({
+        stack = self.find_player_stack()            
+        if stack is not None:
+            self.jogadas_registradas.append({
+            'estagio': self.stage,
             'jogador':self.player_atual,
-            'acao': self.token_atual[1]
-            
-            })
-        self.consumir('PONTO')
+            'acao': self.acao,
+            'quantia': round(self.quantia,1),
+            'pote': round(self.pote,1),
+            'stack': round(stack,1),
+            'linha': self.linha
+            }) 
+        else:
+            raise SyntaxError(f"Jogador {self.player_atual} não encontrado na lista de jogadores.")
+        if self.token_atual and self.token_atual[1] == '.':    
+            self.consumir('.')
 
     #   acao_jogador ::= ACAO JOGADOR_ATIVA [quantidade_fichas|POTE]
     #                   | ACAO JOGADOR_PASSIVA
+    #                   | ALL_IN
     def acao_jogador(self):
-        if self.token_atual and self.token_atual[1] == 'ACAO_JOGADOR_ATIVA':
+        if self.token_atual and self.token_atual[1] == 'ALL_IN':
+            self.acao = self.token_atual[1]
+            for jogador in self.players:
+                if jogador['jogador'] == self.player_atual:
+                    self.quantia = jogador['stack']
+            self.pote += self.quantia
+            self.linha == self.token_atual[2]
+            self.consumir('ALL_IN')
+            
+        elif self.token_atual and self.token_atual[1] == 'ACAO_JOGADOR_ATIVA':
             self.acao = self.token_atual[1]
             self.consumir('ACAO_JOGADOR_ATIVA')
             if self.token_atual and self.token_atual[1] in ['NUM_INT', 'NUM_REAL']:
-                self.quantia = self.token_atual[0]
                 self.quantidade_fichas()
             else:
                 if self.token_atual and self.token_atual[1] == 'POTE':
-                    self.quantia = self.token_atual[1]    
+                    self.quantia += self.pote
+                    self.linha = self.token_atual[2]    
                     self.consumir(self.token_atual[1])
-        elif self.token_atual and self.token_atual[1] == 'ACAO_JOGADOR_PASSIVA':
+        elif self.token_atual and self.token_atual[1] in ACAO_JOGADOR_PASSIVA:
+            
             self.acao = self.token_atual[1]
-            self.consumir('ACAO_JOGADOR_PASSIVA')
-
-    #quantidade_fichas ::= ('NUM_INT'|'NUM_REAL') UNIDADE
+            self.linha = self.token_atual[2]
+            
+            try:
+                stack = self.find_player_stack()
+            except SyntaxError as e:
+                raise SyntaxError(f"Erro na linha {self.linha}: {str(e)}")
+            
+            if self.jogadas_registradas[-1]['quantia'] > stack:
+                self.quantia = stack
+                self.pote += self.quantia
+            
+            if self.token_atual[1] == 'ALL_IN_CALL':
+                self.quantia = stack
+                self.pote += self.quantia
+            
+            self.consumir(self.token_atual[1])
+            self.pote += self.quantia
+        else:
+            raise SyntaxError(f"Esperado ação do jogador, encontrado {self.token_atual}")
+    #quantidade_fichas ::= ('NUM_INT'|'NUM_REAL') UNIDADE|UNIDADE_POTE
     def quantidade_fichas(self):
-        if  
+        if  self.token_atual and self.token_atual[1] == 'NUM_INT':
+            quantia = int(self.token_atual[0])
+            self.linha = self.token_atual[2]
+            self.consumir('NUM_INT')
+        elif self.token_atual and self.token_atual[1] == 'NUM_REAL':
+            quantia = float(self.token_atual[0])
+            self.linha = self.token_atual[2]
+            self.consumir('NUM_REAL')
+        else:
+            if self.token_atual and self.token_atual[1] == 'CARTA':
+                raise SyntaxError(f"Linha {self.token_atual[2]} - Jogador '{self.player_atual}' sem posicao")
+
+            raise SyntaxError(f"Linha {self.token_atual[2]} - Esperado quantidade de fichas ou posicao, encontrado {self.token_atual[1]}")
+
+        if self.stage:
+            if self.token_atual and self.token_atual[1] == 'UNIDADE_POTE':
+                self.quantia = quantia*self.pote
+                stack = self.find_player_stack()
+                if stack < quantia:
+                    raise SyntaxError(f"Jogador {self.player_atual} não tem fichas suficientes para apostar {quantia}. Fichas disponíveis: {stack+quantia}.")
+                self.pote += self.quantia
+            else:
+                self.quantia = quantia
+                stack = self.find_player_stack()
+                if stack < quantia:
+                    raise SyntaxError(f"Jogador {self.player_atual} não tem fichas suficientes para apostar {quantia} {self.token_atual[0]}. Fichas disponíveis: {stack+quantia}.")
+                self.pote += self.quantia
+            self.linha = self.token_atual[2]
+            self.consumir(self.token_atual[1])
+        else:
+            return quantia
+        
 
     #resultado      ::= jogador VERBO_RESULTADO [QUANTIDADE_FICHAS|POTE] PONTO
     def resultado(self):
-        if self.token_atual and self.token_atual[1] in JOGADORES:
-            self.jogador()
+        if self.token_atual and (
+            self.token_atual[1] in JOGADORES or 
+            self.token_atual[1] in posicoes_txt() or 
+            self.token_atual[1] == 'CADEIA'):
+                
+                self.jogador()
+
         self.consumir('VERBO_RESULTADO')
         if self.token_atual and self.token_atual[1] in ['QUANTIDADE_FICHAS', 'POTE']:
             self.consumir(self.token_atual[1])  # tratado como verbo no lexer
-        self.consumir('PONTO')
+        if self.token_atual and self.token_atual[1] == '.':
+            self.consumir('.')
 
         
 def sintax(caminho_arquivo, caminho_saida):
     caminho_saida_alt = caminho_saida.replace('.txt', '_alt.txt')
-    caminho_saida_lexico = caminho_saida.replace('_out.txt', '_lexico.txt')
+    caminho_saida_lexico = caminho_saida.replace('_sintax.txt', '_lexico.txt')
     tokens, tokens_com_linha, erro = lexer_module.lexico(caminho_arquivo, caminho_saida_lexico, caminho_saida_alt)
     
     if erro:
+        if not os.path.exists(os.path.dirname(caminho_saida)):
+            os.makedirs(os.path.dirname(caminho_saida))  
         with open(caminho_saida, "w", encoding="utf-8") as out:
                 out.write(erro + "\n")
                 out.write("Fim da compilacao\n")
-        return erro
     else:
         parser = PokerParser(tokens_com_linha)
         try:
-            parser.historia()
+            jogadas, jogadores = parser.historia()
+            if not os.path.exists(os.path.dirname(caminho_saida)):
+                os.makedirs(os.path.dirname(caminho_saida))  
             with open(caminho_saida, "w", encoding="utf-8") as out:
                 out.write("Fim da compilacao\n")
-            print("História sintaticamente válida!")
-            return None
+            print("Sintax: OK!")
+            return None, jogadas, jogadores
         except SyntaxError as e:
+            if not os.path.exists(os.path.dirname(caminho_saida)):
+                os.makedirs(os.path.dirname(caminho_saida))     
             with open(caminho_saida, "w", encoding="utf-8") as out:
                 out.write(str(e) + "\n")
                 out.write("Fim da compilacao\n")
             print(str(e))
-            return e
+            return e, None, None
 
 
 
