@@ -55,7 +55,7 @@ Em linha de comando windows:
 > Evite ações irreais ("<Jogador A> apostou. <Jogador A> pagou", por exemplo. Cenário tratado)
 ## Resultado
 
-- apenas para informar wuem venceu/perdeu a rodada
+- apenas para informar quem venceu/perdeu a rodada
 - "Eu perdi"
 - "Daniel venceu"
 
